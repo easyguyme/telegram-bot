@@ -59,8 +59,8 @@ def get_likes(shortcode):
             likes = data['data']['shortcode_media']['edge_liked_by']['count']
             print "Likes: ", likes
             try:
-                if int(likes) > 3000:
-                    count = int(likes)
+                if likes > 3000:
+                    count = likes
                     first_page = ''
                     req = requests.get(first_page, headers)
                     data = json.loads(req.text)
@@ -124,7 +124,7 @@ def get_comments(shortcode):
             print "Comments: ", comments
             try:
                 if comments > 3000:
-                    count = int(comments)
+                    count = comments
                     first_page = ''
                     req = requests.get(first_page, headers)
                     data = json.loads(req.text)
