@@ -17,11 +17,33 @@ scheduler = BackgroundScheduler()
 bot = telebot.TeleBot(settings.token)
 db = DBHelper()
 
+
+# ============================================= #
+
+
+#WEBHOOK_HOST = '0.0.0.0'
+#WEBHOOK_PORT = 8443  # 443, 80, 88, 8443 
+#WEBHOOK_LISTEN = '0.0.0.0'  
+
+#WEBHOOK_SSL_CERT = './webhook_cert.pem'  
+#WEBHOOK_SSL_PRIV = './webhook_pkey.pem'  
+
+#WEBHOOK_URL_BASE = "https://%s:%s" % (WEBHOOK_HOST, WEBHOOK_PORT)
+#WEBHOOK_URL_PATH = "/%s/" % (settings.token)
+
+
+
+# ============================================= #
+
+
 chat_id = settings.chat_id
 tlgrmList = []
 usersList = []
 oldUsers = []
 superadmins = [236514781]
+
+
+# ============================================= #
 
 
 def game():
@@ -39,13 +61,13 @@ def game():
             print insta_data
             username_index = allUsers.index(insta_data)
             print username_index
-            if username_index < 2:
+            if username_index < 5:
                 pass
             else:                
                 points = 0
                 insta_username = dict(insta_data).keys()[0]                
                 insta_self_id = instagram_engine.get_id(insta_username)                
-                offset = username_index - 2
+                offset = username_index - 5
                 slicedList = allUsers[offset:(username_index - 1)]
                 for post_data in slicedList:
                     post = dict(post_data).values()[0]
@@ -79,13 +101,15 @@ def game():
                 text += '<b>@' + (str(leecher) + '</b> - ' + str(warnings) + '/3 warnings\n')
             bot.send_message(chat_id, text, parse_mode='HTML')
         else:
-            bot.send_message(chat_id, 'GROUP LEECHERS:\n\nIn the last hour we had no leechers!')
-        oldUsers = list(roundList[-2:])
+            bot.send_message(chat_id, 'GROUP LEECHERS:\n\nIn the last 30 minutes we had no leechers!')
+        oldUsers = list(allUsers[-5:])
         roundList = []
+        allUsers = []
     except Exception as e:
         print e
 
-# ====================================== #
+
+# ============================================= #
 
 
 #@bot.message_handler(content_types=['text'])
@@ -96,7 +120,7 @@ def game():
 @bot.message_handler(commands=['start'])
 def handle_text(message):
     if message.chat.type == "private":        
-        text = "Hello %s! Contact @ajcartas to join the game" % message.from_user.first_name
+        text = "Hello %s! Contact @ajcartas to join the game." % message.from_user.first_name
         bot.send_message(tlgrm_id, text)
 
 
@@ -117,7 +141,7 @@ def handle_text(message):
 @bot.message_handler(commands=['addadmin'])
 def handle_text(message):
     if message.chat.type == "private" and message.from_user.id in superadmins:
-        text = "Send me an instagram username without @"
+        text = "Send me an instagram username without @."
         msg = bot.send_message(message.chat.id, text)
         bot.register_next_step_handler(msg, add_admin)
 
@@ -136,7 +160,7 @@ def add_admin(message):
 @bot.message_handler(commands=['deladmin'])
 def handle_text(message):
     if message.chat.type == "private" and message.from_user.id in superadmins:
-        text = "Send me an instagram username without @"
+        text = "Send me an instagram username without @."
         msg = bot.send_message(message.chat.id, text)
         bot.register_next_step_handler(msg, del_admin)
 
@@ -185,6 +209,9 @@ def handle_text(message):
             bot.send_message(message.chat.id, text, parse_mode='HTML')
 
 
+# ============================================= #
+
+
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
     global tlgrmList
@@ -192,7 +219,7 @@ def handle_text(message):
     tlgrm_id = message.from_user.id
     words = message.text.replace('\n', ' ')
     words = words.split(' ')
-    if message.text.startswith('Dx5') or message.text.startswith('dx5') or message.text.startswith('dX5') or message.text.startswith('DX5'):
+    if message.text.lower().startswith('dx5'): 
         if len(words) == 3:            
             insta_user = words[1].replace('@', '')
             post = words[2]
@@ -203,12 +230,22 @@ def handle_text(message):
                 try:
                     insta_self_id = instagram_engine.get_id(insta_user)
                     post_owner_id = instagram_engine.get_post_owner(shortcode)
+                    followers = instagram_engine.get_followers(insta_user)
                     if str(insta_self_id) != str(post_owner_id):
                         bot.delete_message(chat_id, message.message_id)
+                        text = "Dear %s, I deleted your message because the given link doesn't match to given username. Try again." % message.from_user.first_name
+                        bot.send_message(chat_id, text, parse_mode='HTML')
+                    elif followers < 100:
+                        bot.delete_message(chat_id, message.message_id)
+                        text = "Dear %s, I deleted your message because you don't have enough followers." % message.from_user.first_name
+                        bot.send_message(chat_id, text, parse_mode='HTML')
                     else:
-                        if tlgrm_id in tlgrmList:
+                        if tlgrm_id in tlgrmList[-5:]:
                             bot.delete_message(chat_id, message.message_id)
-                        else:                            
+                            text = "Dear %s, please don't flood, you are already sent your username and post." % message.from_user.first_name
+                            bot.send_message(chat_id, text, parse_mode='HTML')
+                        else:
+                            bot.pin_chat_message(chat_id, message.message_id)
                             tlgrmList.append(tlgrm_id)
                             usersList.append({insta_user: post})
                             check_user = db.get_tlgrm_user(tlgrm_id)        
@@ -222,7 +259,7 @@ def handle_text(message):
         elif len(words) > 3:
             bot.delete_message(chat_id, message.message_id)
             text = "Dear %s, I deleted your message because it doesn't match the format. Please send only messages like this:\n\nDx5 <b>@username</b>\nhttps://instagram.com/p/{post-id}/" % message.from_user.first_name
-        bot.send_message(chat_id, text, parse_mode='HTML')
+            bot.send_message(chat_id, text, parse_mode='HTML')
     elif re.findall(r'admin.post', message.text, re.IGNORECASE) != []:
         is_admin = db.get_admin(message.from_user.id)
         if is_admin != 'none':
@@ -235,14 +272,26 @@ def handle_text(message):
                     message.text, re.IGNORECASE) != []:
         bot.delete_message(chat_id, message.message_id)
         text = "Dear %s, I deleted your message because it doesn't match the format. Please send only messages like this:\n\nDx5 <b>@username</b>\nhttps://instagram.com/p/{post-id}/" % message.from_user.first_name
-        bot.send_message(chat_id, text, parse_mode='HTML')
+        bot.send_message(chat_id, text, parse_mode='HTML')    
+    
+    
             
     
     
-# ======================================= #
+# ============================================= #
 
 
-scheduler.add_job(game, 'interval', minutes=1)
+#bot.remove_webhook()
+#time.sleep(3)
+#bot.set_webhook(url=WEBHOOK_URL_BASE+WEBHOOK_URL_PATH,
+#certificate=open(WEBHOOK_SSL_CERT, 'r'))
+
+
+# ============================================= #
+
+
+
+scheduler.add_job(game, 'interval', minutes=30)
 scheduler.start()
 
 print "Bot started"
