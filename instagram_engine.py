@@ -29,6 +29,15 @@ def get_post_owner(shortcode):
     print "User ID: ", data['graphql']['shortcode_media']['owner']['id']
     return str(data['graphql']['shortcode_media']['owner']['id'])
 
+# ======== Followers ======== #
+
+def get_followers(username):
+    address = 'https://www.instagram.com/%s/?__a=1' % username
+    req = requests.get(address, headers)
+    data = json.loads(req.text)
+    #print "Followers: ", data['user']['followed_by']['count']
+    return int(data['user']['followed_by']['count'])
+
 
 # ======== Users Last Posts ======== #
 
