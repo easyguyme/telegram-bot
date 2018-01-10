@@ -10,9 +10,12 @@ from telebot import util
 from dbhelper import DBHelper
 from apscheduler.schedulers.background import BackgroundScheduler
 
-
+# ===== logs ===== #
 logger = telebot.logger
 telebot.logger.setLevel(logging.DEBUG)
+# ================ #
+
+
 scheduler = BackgroundScheduler()
 bot = telebot.TeleBot(settings.token)
 db = DBHelper()
@@ -20,6 +23,7 @@ db = DBHelper()
 
 # ============================================= #
 
+# uncomment to use webhook instead of polling
 
 #WEBHOOK_HOST = '0.0.0.0'
 #WEBHOOK_PORT = 8443  # 443, 80, 88, 8443 
@@ -40,7 +44,7 @@ chat_id = settings.chat_id
 tlgrmList = []
 usersList = []
 oldUsers = []
-superadmins = [236514781]
+superadmins = [236514781]  # users that can use admin commands
 
 
 # ============================================= #
@@ -55,23 +59,23 @@ def game():
         usersList = []
         tlgrmList = []
         leechers = {}
-        allUsers = oldUsers + roundList
+        allUsers = oldUsers + roundList  # adding last 5 users from previous round
         print "All users: ", allUsers
         for insta_data in allUsers:
             print insta_data
-            username_index = allUsers.index(insta_data)
+            username_index = allUsers.index(insta_data)  # index in list
             print username_index
-            if username_index < 5:
+            if username_index < 5:  # skipping last 5 users from the previous round
                 pass
             else:                
                 points = 0
-                insta_username = dict(insta_data).keys()[0]                
-                insta_self_id = instagram_engine.get_id(insta_username)                
-                offset = username_index - 5
-                slicedList = allUsers[offset:(username_index - 1)]
+                insta_username = dict(insta_data).keys()[0]                    
+                insta_self_id = instagram_engine.get_id(insta_username)                  
+                offset = username_index - 5  # 5 users before
+                slicedList = allUsers[offset:username_index]  # list of users to check for likes and comments of given id
                 for post_data in slicedList:
                     post = dict(post_data).values()[0]
-                    shortcode = post.split('/')[4]
+                    shortcode = post.split('/')[4]  # instagram post id
                     try:
                         likesList = instagram_engine.get_likes(shortcode)
                         commentsList = instagram_engine.get_comments(shortcode)
@@ -90,10 +94,10 @@ def game():
                     tlgrm_id = db.get_tlgrm_id(insta_username)
                     if warnings == 3:
                         bot.kick_chat_member(chat_id, tlgrm_id)
-                        db.del_tlgrm_user(tlgrm_id)
+                        db.del_tlgrm_user(tlgrm_id)  # deleting from db
                     else:
-                        db.add_warning(insta_username)
-                        leechers[insta_username] = (warnings + 1)
+                        db.add_warning(insta_username)  # adding waring
+                        leechers[insta_username] = (warnings + 1)  # adding to leechers list
         if len(leechers) > 0:
             text = 'GROUP LEECHERS:\n\n'
             for leecher in leechers.keys():
@@ -102,8 +106,8 @@ def game():
             bot.send_message(chat_id, text, parse_mode='HTML')
         else:
             bot.send_message(chat_id, 'GROUP LEECHERS:\n\nIn the last 30 minutes we had no leechers!')
-        oldUsers = list(allUsers[-5:])
-        roundList = []
+        oldUsers = list(allUsers[-5:])  # saving last 5 users from current round
+        roundList = []  
         allUsers = []
     except Exception as e:
         print e
@@ -230,22 +234,22 @@ def handle_text(message):
                 try:
                     insta_self_id = instagram_engine.get_id(insta_user)
                     post_owner_id = instagram_engine.get_post_owner(shortcode)
-                    followers = instagram_engine.get_followers(insta_user)
-                    if str(insta_self_id) != str(post_owner_id):
+                    followers = instagram_engine.get_followers(insta_user)  # followers count
+                    if str(insta_self_id) != str(post_owner_id):  # prevent swapping username and post
                         bot.delete_message(chat_id, message.message_id)
                         text = "Dear %s, I deleted your message because the given link doesn't match to given username. Try again." % message.from_user.first_name
                         bot.send_message(chat_id, text, parse_mode='HTML')
-                    elif followers < 100:
+                    elif followers < 100:  # deleting posts with usernames that got less than 100 followers
                         bot.delete_message(chat_id, message.message_id)
                         text = "Dear %s, I deleted your message because you don't have enough followers." % message.from_user.first_name
                         bot.send_message(chat_id, text, parse_mode='HTML')
                     else:
-                        if tlgrm_id in tlgrmList[-5:]:
+                        if tlgrm_id in tlgrmList[-5:]:  # preventing users from sending new username and link before 5 new from another users
                             bot.delete_message(chat_id, message.message_id)
                             text = "Dear %s, please don't flood, you are already sent your username and post." % message.from_user.first_name
                             bot.send_message(chat_id, text, parse_mode='HTML')
                         else:
-                            bot.pin_chat_message(chat_id, message.message_id)
+                            #bot.pin_chat_message(chat_id, message.message_id)
                             tlgrmList.append(tlgrm_id)
                             usersList.append({insta_user: post})
                             check_user = db.get_tlgrm_user(tlgrm_id)        
@@ -256,11 +260,11 @@ def handle_text(message):
                 except Exception as e:
                     bot.delete_message(chat_id, message.message_id)
                     print e
-        elif len(words) > 3:
-            bot.delete_message(chat_id, message.message_id)
-            text = "Dear %s, I deleted your message because it doesn't match the format. Please send only messages like this:\n\nDx5 <b>@username</b>\nhttps://instagram.com/p/{post-id}/" % message.from_user.first_name
-            bot.send_message(chat_id, text, parse_mode='HTML')
-    elif re.findall(r'admin.post', message.text, re.IGNORECASE) != []:
+        #elif len(words) != 3:
+            #bot.delete_message(chat_id, message.message_id)
+            #text = "Dear %s, I deleted your message because it doesn't match the format. Please send only messages like this:\n\nDx5 <b>@username</b>\nhttps://instagram.com/p/{post-id}/" % message.from_user.first_name
+            #bot.send_message(chat_id, text, parse_mode='HTML')
+    elif re.findall(r'admin.post', message.text, re.IGNORECASE) != []:  # looking for admin post
         is_admin = db.get_admin(message.from_user.id)
         if is_admin != 'none':
             pass
@@ -269,7 +273,7 @@ def handle_text(message):
             text = 'User trying to send admin post:\n\nFirst name: %s\nLast name: %s\nUsername: %s' % (message.from_user.first_name, message.from_user.last_name, message.from_user.username)
             bot.send_message(superadmins[0], text)
     elif re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
-                    message.text, re.IGNORECASE) != []:
+                    message.text, re.IGNORECASE) != []:  # deleting all invalid format messages and foreighn links
         bot.delete_message(chat_id, message.message_id)
         text = "Dear %s, I deleted your message because it doesn't match the format. Please send only messages like this:\n\nDx5 <b>@username</b>\nhttps://instagram.com/p/{post-id}/" % message.from_user.first_name
         bot.send_message(chat_id, text, parse_mode='HTML')    
@@ -291,14 +295,14 @@ def handle_text(message):
 
 
 
-scheduler.add_job(game, 'interval', minutes=30)
+scheduler.add_job(game, 'interval', minutes=30)  # starting round each 30 minutes
 scheduler.start()
 
 print "Bot started"
 
 while True:
     try:      
-        bot.polling(none_stop=True)
+        bot.polling(none_stop=True)  # polling
     except Exception as e:
         logger.error(e)
         time.sleep(15)
