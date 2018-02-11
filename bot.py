@@ -124,7 +124,7 @@ def game():
 @bot.message_handler(commands=['start'])
 def handle_text(message):
     if message.chat.type == "private":        
-        text = "Hello %s! Contact @ajcartas to join the game." % message.from_user.first_name
+        text = "Hello %s! Contact @bohdan_antonov to join the game." % message.from_user.first_name
         bot.send_message(tlgrm_id, text)
 
 
@@ -275,8 +275,8 @@ def handle_text(message):
     elif re.findall(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+',
                     message.text, re.IGNORECASE) != []:  # deleting all invalid format messages and foreighn links
         bot.delete_message(chat_id, message.message_id)
-        text = "Dear %s, I deleted your message because it doesn't match the format. Please send only messages like this:\n\nDx5 <b>@username</b>\nhttps://instagram.com/p/{post-id}/" % message.from_user.first_name
-        bot.send_message(chat_id, text, parse_mode='HTML')    
+        #text = "Dear %s, I deleted your message because it doesn't match the format. Please send only messages like this:\n\nDx5 <b>@username</b>\nhttps://instagram.com/p/{post-id}/" % message.from_user.first_name
+        #bot.send_message(chat_id, text, parse_mode='HTML')    
     
     
             
