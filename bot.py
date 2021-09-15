@@ -134,9 +134,7 @@ def handle_text(message):
         admins = db.all_admins()
         text = "All admins:\n\n"
         for admin in admins:
-            if str(admin[0]) == 'none':
-                pass
-            else:
+            if str(admin[0]) != 'none':
                 text += "<b>@%s</b>\n" % (str(admin[0]))
         bot.send_message(message.from_user.id, text, parse_mode='HTML')
 
@@ -200,17 +198,19 @@ def del_warning(message):
 
 @bot.message_handler(commands=['allwarnings'])
 def handle_text(message):
-    if message.chat.type == "private" and message.from_user.id in superadmins:
-        warnings = db.all_warnings()
-        text = "All warnings:\n\n"
-        for warning in warnings:
-            if str(warning[0]) == 'none':
-                pass
-            else:
-                text += "<b>@%s</b>: %s\n" % (str(warning[0]), str(warning[1]))
-        splitted_text = util.split_string(text, 3000)
-        for text in splitted_text:
-            bot.send_message(message.chat.id, text, parse_mode='HTML')
+    if (
+        message.chat.type != "private"
+        or message.from_user.id not in superadmins
+    ):
+        return
+    warnings = db.all_warnings()
+    text = "All warnings:\n\n"
+    for warning in warnings:
+        if str(warning[0]) != 'none':
+            text += "<b>@%s</b>: %s\n" % (str(warning[0]), str(warning[1]))
+    splitted_text = util.split_string(text, 3000)
+    for text in splitted_text:
+        bot.send_message(message.chat.id, text, parse_mode='HTML')
 
 
 # ============================================= #

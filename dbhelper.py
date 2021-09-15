@@ -108,12 +108,10 @@ class DBHelper:
 
     def all_warnings(self):
         self.c.execute("SELECT insta_user, warnings FROM data")
-        warnings = self.c.fetchall()
-        return warnings
+        return self.c.fetchall()
 
     def all_admins(self):
         self.c.execute("SELECT insta_user FROM data WHERE admin=1")
-        admins = self.c.fetchall()
-        return admins
+        return self.c.fetchall()
 
 
